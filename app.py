@@ -11,6 +11,7 @@ import base64
 import PyPDF2
 import docx
 import pandas as pd  # ✅ BUG 2 FIXED — moved to top
+from huggingface_hub import InferenceClient  # ✅ replaces deprecated hf-inference REST call
 
 # ✅ Firebase setup — safe single init
 if not firebase_admin._apps:
@@ -82,15 +83,10 @@ def clear_chat_from_firebase(session_id):
         st.toast(f"❌ Firebase clear failed: {e}")
 
 def generate_image(prompt):
-    API_URL = "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell"
-    headers = {"Authorization": f"Bearer {HF_API_KEY}"}
     try:
-        response = requests.post(API_URL, headers=headers, json={"inputs": prompt})
-        if response.status_code == 200:
-            image = Image.open(io.BytesIO(response.content))
-            return image, None
-        else:
-            return None, f"Status: {response.status_code} — {response.text}"
+        hf_client = InferenceClient(api_key=HF_API_KEY)
+        image = hf_client.text_to_image(prompt, model="black-forest-labs/FLUX.1-schnell")
+        return image, None
     except Exception as e:
         return None, str(e)
 

@@ -7,3 +7,4 @@ PyPDF2
 python-docx
 SpeechRecognition
 pandas
+huggingface_hub
