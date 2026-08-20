@@ -8,7 +8,7 @@ import requests
 from PIL import Image
 import io
 import base64
-import fitz  # PyMuPDF — better text extraction for resume-style PDFs than PyPDF2
+import PyPDF2
 import docx
 import pandas as pd  # ✅ BUG 2 FIXED — moved to top
 from huggingface_hub import InferenceClient  # ✅ replaces deprecated hf-inference REST call
@@ -92,13 +92,8 @@ def generate_image(prompt):
 
 def extract_text(file):
     if file.name.endswith(".pdf"):
-        pdf_bytes = file.read()
-        pdf_doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-        text = ""
-        for page in pdf_doc:
-            text += page.get_text()
-        pdf_doc.close()
-        return text
+        reader = PyPDF2.PdfReader(file)
+        return "\n".join([page.extract_text() or "" for page in reader.pages])
     elif file.name.endswith(".docx"):
         doc = docx.Document(file)
         return "\n".join([p.text for p in doc.paragraphs])
@@ -193,25 +188,20 @@ with st.sidebar:
 # Main area
 st.title("Necko Bytes 🐱✨")
 
-# ✅ Fixed-height, non-autoscrolling container — stops the page from jumping
-# to the bottom every time a reply is added, so you can actually read it
-chat_container = st.container(height=600, autoscroll=False)
-
-with chat_container:
-    # Display messages
-    for i, msg in enumerate(st.session_state.messages):
-        if msg["role"] != "system":
-            with st.chat_message(msg["role"]):
-                if msg.get("type") == "image":
-                    img_data = base64.b64decode(msg["content"])
-                    st.image(Image.open(io.BytesIO(img_data)), caption=msg.get("caption", ""))
-                else:
-                    st.markdown(msg["content"], unsafe_allow_html=True)
-                    if msg["role"] == "assistant":
-                        col1, col2 = st.columns([1, 10])
-                        with col1:
-                            if st.button("📋", key=f"copy_{i}", help="Copy response"):
-                                st.code(msg["content"])
+# Display messages
+for i, msg in enumerate(st.session_state.messages):
+    if msg["role"] != "system":
+        with st.chat_message(msg["role"]):
+            if msg.get("type") == "image":
+                img_data = base64.b64decode(msg["content"])
+                st.image(Image.open(io.BytesIO(img_data)), caption=msg.get("caption", ""))
+            else:
+                st.markdown(msg["content"], unsafe_allow_html=True)
+                if msg["role"] == "assistant":
+                    col1, col2 = st.columns([1, 10])
+                    with col1:
+                        if st.button("📋", key=f"copy_{i}", help="Copy response"):
+                            st.code(msg["content"])
 
 # Mode UI
 if mode == "🎨 Generate Image":
@@ -241,16 +231,13 @@ elif mode == "📄 Analyse File":
     if st.button("Analyse!!") and uploaded_file:
         with st.spinner("Reading every word... 📄"):
             text = extract_text(uploaded_file)
-            if not text.strip():
-                st.error("Couldn't extract any text from this file — it might be a scanned image rather than a real text-based PDF.")
-            else:
-                q = question if question else "Explain everything in full detail"
-                reply = analyse_text(text, q)
-                st.session_state.messages.append({"role": "user", "content": f"[File: {uploaded_file.name}] {q}"})
-                st.session_state.messages.append({"role": "assistant", "content": reply})
-                save_message("user", f"[File: {uploaded_file.name}] {q}")
-                save_message("assistant", reply)
-                st.rerun()
+            q = question if question else "Explain everything in full detail"
+            reply = analyse_text(text, q)
+            st.session_state.messages.append({"role": "user", "content": f"[File: {uploaded_file.name}] {q}"})
+            st.session_state.messages.append({"role": "assistant", "content": reply})
+            save_message("user", f"[File: {uploaded_file.name}] {q}")
+            save_message("assistant", reply)
+            st.rerun()
 
 elif mode == "🖼️ Analyse Image":
     st.divider()
@@ -324,6 +311,8 @@ elif mode == "📊 Analyse CSV":
 # Chat input
 if prompt := st.chat_input("Talk to Necko Bytes..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
 
     response = client.chat.completions.create(
         model="openai/gpt-oss-120b",
@@ -333,6 +322,8 @@ if prompt := st.chat_input("Talk to Necko Bytes..."):
     reply = response.choices[0].message.content
     st.session_state.messages.append({"role": "assistant", "content": reply})
 
+    with st.chat_message("assistant"):
+        st.markdown(reply, unsafe_allow_html=True)
+
     save_message("user", prompt)
     save_message("assistant", reply)
-    st.rerun()
