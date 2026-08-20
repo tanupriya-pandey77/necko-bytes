@@ -110,7 +110,7 @@ def analyse_text(text, question):
     full_reply = ""
     for i, chunk in enumerate(chunks):
         chunk_response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=[
                 SYSTEM_PROMPT,
                 {"role": "user", "content": f"Part {i+1}/{len(chunks)}:\n\n{chunk}\n\nInstruction: {question}\n\nCover every single point completely!!"}
@@ -125,7 +125,7 @@ def analyse_image_file(image_file, question):
     ext = image_file.name.split(".")[-1].lower()
     media_type = f"image/{'jpeg' if ext == 'jpg' else ext}"
     response = client.chat.completions.create(
-        model="meta-llama/llama-4-scout-17b-16e-instruct",
+        model="qwen/qwen3.6-27b",
         messages=[{
             "role": "user",
             "content": [
@@ -264,7 +264,7 @@ elif mode == "🎤 Voice Input":
         st.success(f"You said: {text}")
         st.session_state.messages.append({"role": "user", "content": text})
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=[m for m in st.session_state.messages if m.get("type") != "image"]
         )
         reply = response.choices[0].message.content
@@ -281,7 +281,7 @@ elif mode == "🌐 Web Search":
             results = web_search(search_query)
             prompt = f"Here are web search results for '{search_query}':\n\n{results}\n\nSummarize and explain this information!!"
             response = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model="openai/gpt-oss-120b",
                 messages=[SYSTEM_PROMPT, {"role": "user", "content": prompt}]
             )
             reply = response.choices[0].message.content
@@ -302,7 +302,7 @@ elif mode == "📊 Analyse CSV":
             data_summary = f"Columns: {list(df.columns)}\nShape: {df.shape}\nSample:\n{df.head(20).to_string()}"
             q = csv_question if csv_question else "Analyse this data and give key insights!!"
             response = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model="openai/gpt-oss-120b",
                 messages=[SYSTEM_PROMPT, {"role": "user", "content": f"Here is a dataset:\n\n{data_summary}\n\n{q}"}]
             )
             reply = response.choices[0].message.content
@@ -319,7 +319,7 @@ if prompt := st.chat_input("Talk to Necko Bytes..."):
         st.markdown(prompt)
 
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         messages=[m for m in st.session_state.messages if m.get("type") != "image"]
     )
 
