@@ -195,23 +195,19 @@ st.title("Necko Bytes 🐱✨")
 
 # ✅ Fixed-height, non-autoscrolling container — stops the page from jumping
 # to the bottom every time a reply is added, so you can actually read it
-chat_container = st.container(height=600, autoscroll=False)
-
-with chat_container:
-    # Display messages
-    for i, msg in enumerate(st.session_state.messages):
-        if msg["role"] != "system":
-            with st.chat_message(msg["role"]):
-                if msg.get("type") == "image":
-                    img_data = base64.b64decode(msg["content"])
-                    st.image(Image.open(io.BytesIO(img_data)), caption=msg.get("caption", ""))
-                else:
-                    st.markdown(msg["content"], unsafe_allow_html=True)
-                    if msg["role"] == "assistant":
-                        col1, col2 = st.columns([1, 10])
-                        with col1:
-                            if st.button("📋", key=f"copy_{i}", help="Copy response"):
-                                st.code(msg["content"])
+for i, msg in enumerate(st.session_state.messages):
+    if msg["role"] != "system":
+        with st.chat_message(msg["role"]):
+            if msg.get("type") == "image":
+                img_data = base64.b64decode(msg["content"])
+                st.image(Image.open(io.BytesIO(img_data)), caption=msg.get("caption", ""))
+            else:
+                st.markdown(msg["content"], unsafe_allow_html=True)
+                if msg["role"] == "assistant":
+                    col1, col2 = st.columns([1, 10])
+                    with col1:
+                        if st.button("📋", key=f"copy_{i}", help="Copy response"):
+                            st.code(msg["content"])
 
 # Mode UI
 if mode == "🎨 Generate Image":
