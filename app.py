@@ -8,7 +8,7 @@ import requests
 from PIL import Image
 import io
 import base64
-import PyPDF2
+import fitz  # PyMuPDF — better text extraction for resume-style PDFs than PyPDF2
 import docx
 import pandas as pd  # ✅ BUG 2 FIXED — moved to top
 from huggingface_hub import InferenceClient  # ✅ replaces deprecated hf-inference REST call
@@ -92,8 +92,13 @@ def generate_image(prompt):
 
 def extract_text(file):
     if file.name.endswith(".pdf"):
-        reader = PyPDF2.PdfReader(file)
-        return "\n".join([page.extract_text() or "" for page in reader.pages])
+        pdf_bytes = file.read()
+        pdf_doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        text = ""
+        for page in pdf_doc:
+            text += page.get_text()
+        pdf_doc.close()
+        return text
     elif file.name.endswith(".docx"):
         doc = docx.Document(file)
         return "\n".join([p.text for p in doc.paragraphs])
@@ -231,13 +236,16 @@ elif mode == "📄 Analyse File":
     if st.button("Analyse!!") and uploaded_file:
         with st.spinner("Reading every word... 📄"):
             text = extract_text(uploaded_file)
-            q = question if question else "Explain everything in full detail"
-            reply = analyse_text(text, q)
-            st.session_state.messages.append({"role": "user", "content": f"[File: {uploaded_file.name}] {q}"})
-            st.session_state.messages.append({"role": "assistant", "content": reply})
-            save_message("user", f"[File: {uploaded_file.name}] {q}")
-            save_message("assistant", reply)
-            st.rerun()
+            if not text.strip():
+                st.error("Couldn't extract any text from this file — it might be a scanned image rather than a real text-based PDF.")
+            else:
+                q = question if question else "Explain everything in full detail"
+                reply = analyse_text(text, q)
+                st.session_state.messages.append({"role": "user", "content": f"[File: {uploaded_file.name}] {q}"})
+                st.session_state.messages.append({"role": "assistant", "content": reply})
+                save_message("user", f"[File: {uploaded_file.name}] {q}")
+                save_message("assistant", reply)
+                st.rerun()
 
 elif mode == "🖼️ Analyse Image":
     st.divider()

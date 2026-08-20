@@ -3,7 +3,7 @@ groq
 firebase-admin
 Pillow
 requests
-PyPDF2
+pymupdf
 python-docx
 SpeechRecognition
 pandas
