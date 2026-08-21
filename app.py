@@ -193,8 +193,7 @@ with st.sidebar:
 # Main area
 st.title("Necko Bytes 🐱✨")
 
-# ✅ Fixed-height, non-autoscrolling container — stops the page from jumping
-# to the bottom every time a reply is added, so you can actually read it
+# Display messages
 for i, msg in enumerate(st.session_state.messages):
     if msg["role"] != "system":
         with st.chat_message(msg["role"]):
@@ -320,6 +319,8 @@ elif mode == "📊 Analyse CSV":
 # Chat input
 if prompt := st.chat_input("Talk to Necko Bytes..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
 
     response = client.chat.completions.create(
         model="openai/gpt-oss-120b",
@@ -329,6 +330,8 @@ if prompt := st.chat_input("Talk to Necko Bytes..."):
     reply = response.choices[0].message.content
     st.session_state.messages.append({"role": "assistant", "content": reply})
 
+    with st.chat_message("assistant"):
+        st.markdown(reply, unsafe_allow_html=True)
+
     save_message("user", prompt)
     save_message("assistant", reply)
-    st.rerun()
